@@ -8,3 +8,5 @@
 *.csproj
 *.sln
 .vs/
+/[Aa]ssets/_Recovery*
+*.slnx

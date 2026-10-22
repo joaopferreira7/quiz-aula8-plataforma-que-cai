@@ -1,5 +1,5 @@
 {
     "name": "Quiz",
-    "references": [],
+    "references": ["Unity.InputSystem"],
     "autoReferenced": true
 }

@@ -1,5 +1,0 @@
-﻿<Solution>
-  <Project Path="Quiz.csproj" />
-  <Project Path="Quiz.Tests.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
-</Solution>
