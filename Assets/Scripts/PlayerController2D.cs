@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 /// Movimentação básica 2D: andar para os lados e pular.
 /// Teclado: A/D ou setas para andar, Espaço/W/seta para cima para pular. Controle: analógico esquerdo + botão A.
 /// Toda a movimentação é feita pela física (Rigidbody2D), sem animação.
-/// Funciona tanto com o Input System (novo) quanto com o Input Manager (antigo),
-/// dependendo do que estiver ativo em Project Settings > Player > Active Input Handling.
+/// Funciona com o Input System (novo) e com o Input Manager (antigo):
+/// Project Settings > Player > Active Input Handling está em "Both".
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController2D : MonoBehaviour
@@ -76,36 +76,57 @@ public class PlayerController2D : MonoBehaviour
 
     private static float LerHorizontal()
     {
-        float h = 0f;
 #if ENABLE_INPUT_SYSTEM
         // Input System (novo): lê o teclado e o controle diretamente.
-        var teclado = Keyboard.current;
-        if (teclado != null)
+        if (InputSystemDisponivel())
         {
-            if (teclado.aKey.isPressed || teclado.leftArrowKey.isPressed) h -= 1f;
-            if (teclado.dKey.isPressed || teclado.rightArrowKey.isPressed) h += 1f;
+            float h = 0f;
+            var teclado = Keyboard.current;
+            if (teclado != null)
+            {
+                if (teclado.aKey.isPressed || teclado.leftArrowKey.isPressed) h -= 1f;
+                if (teclado.dKey.isPressed || teclado.rightArrowKey.isPressed) h += 1f;
+            }
+            var controle = Gamepad.current;
+            if (controle != null && Mathf.Abs(controle.leftStick.x.ReadValue()) > 0.2f)
+                h = controle.leftStick.x.ReadValue();
+            return Mathf.Clamp(h, -1f, 1f);
         }
-        var controle = Gamepad.current;
-        if (controle != null && Mathf.Abs(controle.leftStick.x.ReadValue()) > 0.2f)
-            h = controle.leftStick.x.ReadValue();
-#else
-        // Input Manager (antigo)
-        h = Input.GetAxisRaw("Horizontal");
 #endif
-        return Mathf.Clamp(h, -1f, 1f);
+#if ENABLE_LEGACY_INPUT_MANAGER
+        // Input Manager (antigo)
+        return Input.GetAxisRaw("Horizontal");
+#else
+        return 0f;
+#endif
     }
 
     private static bool LerPulo()
     {
 #if ENABLE_INPUT_SYSTEM
-        var teclado = Keyboard.current;
-        var controle = Gamepad.current;
-        return (teclado != null && (teclado.spaceKey.wasPressedThisFrame || teclado.wKey.wasPressedThisFrame || teclado.upArrowKey.wasPressedThisFrame))
-            || (controle != null && controle.buttonSouth.wasPressedThisFrame);
-#else
+        if (InputSystemDisponivel())
+        {
+            var teclado = Keyboard.current;
+            var controle = Gamepad.current;
+            return (teclado != null && (teclado.spaceKey.wasPressedThisFrame || teclado.wKey.wasPressedThisFrame || teclado.upArrowKey.wasPressedThisFrame))
+                || (controle != null && controle.buttonSouth.wasPressedThisFrame);
+        }
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
         return Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
+#else
+        return false;
 #endif
     }
+
+#if ENABLE_INPUT_SYSTEM
+    // Se o Input System não enxergar nenhum teclado/controle (ex.: o editor ainda não foi reiniciado
+    // depois de trocar o "Active Input Handling"), usa o Input Manager antigo.
+    private static bool InputSystemDisponivel()
+    {
+        return Keyboard.current != null || Gamepad.current != null;
+    }
+#endif
 
     public bool EstaNoChao()
     {
