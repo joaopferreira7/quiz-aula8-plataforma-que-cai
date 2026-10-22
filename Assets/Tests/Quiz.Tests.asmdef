@@ -1,6 +1,6 @@
 {
     "name": "Quiz.Tests",
-    "references": ["Quiz", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+    "references": ["Quiz", "UnityEngine.TestRunner", "UnityEditor.TestRunner", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
     "overrideReferences": true,
     "precompiledReferences": ["nunit.framework.dll"],
     "autoReferenced": false,

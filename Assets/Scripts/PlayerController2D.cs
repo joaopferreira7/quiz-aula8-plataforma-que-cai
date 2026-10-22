@@ -1,10 +1,14 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Movimentação básica 2D: andar para os lados e pular.
 /// Teclado: A/D ou setas para andar, Espaço/W/seta para cima para pular. Controle: analógico esquerdo + botão A.
 /// Toda a movimentação é feita pela física (Rigidbody2D), sem animação.
+/// Funciona tanto com o Input System (novo) quanto com o Input Manager (antigo),
+/// dependendo do que estiver ativo em Project Settings > Player > Active Input Handling.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController2D : MonoBehaviour
@@ -25,8 +29,6 @@ public class PlayerController2D : MonoBehaviour
     private readonly ContactPoint2D[] contatos = new ContactPoint2D[8];
     private Vector3 posicaoInicial;
 
-    private InputAction acaoMover;
-    private InputAction acaoPular;
     private float inputHorizontal;
     private bool pediuPulo;
 
@@ -41,38 +43,13 @@ public class PlayerController2D : MonoBehaviour
         // Assim não precisamos de layers nem de objetos auxiliares para checar o chão.
         filtroChao = new ContactFilter2D();
         filtroChao.SetNormalAngle(45f, 135f);
-
-        // Inputs criados por código com o Input System (não precisa de arquivo .inputactions).
-        acaoMover = new InputAction("Mover", InputActionType.Value);
-        acaoMover.AddCompositeBinding("1DAxis").With("Negative", "<Keyboard>/a").With("Positive", "<Keyboard>/d");
-        acaoMover.AddCompositeBinding("1DAxis").With("Negative", "<Keyboard>/leftArrow").With("Positive", "<Keyboard>/rightArrow");
-        acaoMover.AddBinding("<Gamepad>/leftStick/x");
-
-        acaoPular = new InputAction("Pular", InputActionType.Button);
-        acaoPular.AddBinding("<Keyboard>/space");
-        acaoPular.AddBinding("<Keyboard>/w");
-        acaoPular.AddBinding("<Keyboard>/upArrow");
-        acaoPular.AddBinding("<Gamepad>/buttonSouth");
-    }
-
-    private void OnEnable()
-    {
-        acaoMover.Enable();
-        acaoPular.Enable();
-    }
-
-    private void OnDisable()
-    {
-        acaoMover.Disable();
-        acaoPular.Disable();
     }
 
     private void Update()
     {
         // Inputs são lidos no Update (a cada frame) para não perder nenhum aperto de tecla.
-        inputHorizontal = acaoMover.ReadValue<float>();
-
-        if (acaoPular.WasPressedThisFrame())
+        inputHorizontal = LerHorizontal();
+        if (LerPulo())
             pediuPulo = true;
 
         // Vira o sprite para o lado em que está andando.
@@ -95,6 +72,39 @@ public class PlayerController2D : MonoBehaviour
 
         pediuPulo = false;
         rb.linearVelocity = v;
+    }
+
+    private static float LerHorizontal()
+    {
+        float h = 0f;
+#if ENABLE_INPUT_SYSTEM
+        // Input System (novo): lê o teclado e o controle diretamente.
+        var teclado = Keyboard.current;
+        if (teclado != null)
+        {
+            if (teclado.aKey.isPressed || teclado.leftArrowKey.isPressed) h -= 1f;
+            if (teclado.dKey.isPressed || teclado.rightArrowKey.isPressed) h += 1f;
+        }
+        var controle = Gamepad.current;
+        if (controle != null && Mathf.Abs(controle.leftStick.x.ReadValue()) > 0.2f)
+            h = controle.leftStick.x.ReadValue();
+#else
+        // Input Manager (antigo)
+        h = Input.GetAxisRaw("Horizontal");
+#endif
+        return Mathf.Clamp(h, -1f, 1f);
+    }
+
+    private static bool LerPulo()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var teclado = Keyboard.current;
+        var controle = Gamepad.current;
+        return (teclado != null && (teclado.spaceKey.wasPressedThisFrame || teclado.wKey.wasPressedThisFrame || teclado.upArrowKey.wasPressedThisFrame))
+            || (controle != null && controle.buttonSouth.wasPressedThisFrame);
+#else
+        return Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
+#endif
     }
 
     public bool EstaNoChao()
